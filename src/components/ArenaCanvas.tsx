@@ -415,25 +415,25 @@ export const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
         ctx.ellipse(0, 0, 20, 6, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Pulsing selection ring (DDTool green aura)
-        ctx.strokeStyle = '#22c55e';
-        ctx.lineWidth = 2;
+        // Pulsing selection ring (DDTool Blue aura)
+        ctx.strokeStyle = '#3b82f6';
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
         ctx.arc(0, -14, 22, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Tank base (Chassis)
-        ctx.fillStyle = '#15803d';
+        // Tank base (Chassis) - Blue
+        ctx.fillStyle = '#1e40af';
         ctx.fillRect(-16, -10, 32, 10);
-        ctx.fillStyle = '#166534';
+        ctx.fillStyle = '#1e3a8a';
         ctx.beginPath();
         ctx.arc(-10, -2, 4, 0, Math.PI * 2);
         ctx.arc(0, -2, 4, 0, Math.PI * 2);
         ctx.arc(10, -2, 4, 0, Math.PI * 2);
         ctx.fill();
 
-        // Turret Dome
-        ctx.fillStyle = '#22c55e';
+        // Turret Dome - Blue
+        ctx.fillStyle = '#3b82f6';
         ctx.beginPath();
         ctx.arc(0, -12, 10, Math.PI, 0);
         ctx.fill();
@@ -445,7 +445,7 @@ export const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
         const bx = Math.cos(rad) * barrelLen * dir;
         const by = -Math.sin(rad) * barrelLen;
 
-        ctx.strokeStyle = '#f8fafc';
+        ctx.strokeStyle = '#93c5fd';
         ctx.lineWidth = 4;
         ctx.lineCap = 'round';
         ctx.beginPath();
@@ -454,17 +454,17 @@ export const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
         ctx.stroke();
 
         // Angle arc visualizer above tank
-        ctx.strokeStyle = 'rgba(34, 197, 94, 0.5)';
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.6)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(0, -12, 28, facingRight ? -rad : Math.PI - rad, facingRight ? 0 : Math.PI, !facingRight);
         ctx.stroke();
 
         // Player Tag
-        ctx.fillStyle = '#4ade80';
+        ctx.fillStyle = '#60a5fa';
         ctx.font = 'bold 11px Chakra Petch';
         ctx.textAlign = 'center';
-        ctx.fillText(`VOCÊ (${angle}°)`, 0, -42);
+        ctx.fillText(`JOGADOR AZUL (${angle}°)`, 0, -42);
         ctx.restore();
       }
 
@@ -806,13 +806,13 @@ export const ArenaCanvas: React.FC<ArenaCanvasProps> = ({
 
           <button
             onClick={() => setActiveTool('place_player')}
-            title="Posicionar Você (Shift + Clique)"
+            title="Posicionar Jogador Azul (Shift + Clique)"
             className={`p-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
-              activeTool === 'place_player' ? 'bg-emerald-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+              activeTool === 'place_player' ? 'bg-blue-600 text-white shadow-[0_0_12px_rgba(59,130,246,0.5)]' : 'text-slate-300 hover:bg-slate-800'
             }`}
           >
-            <ShieldAlert className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden sm:inline">{lang === 'pt' ? 'Meu Tanque' : 'Player'}</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
+            <span className="hidden sm:inline">{lang === 'pt' ? 'Jogador Azul' : 'Player Blue'}</span>
           </button>
 
           <button

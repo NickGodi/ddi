@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, RotateCcw, Crosshair, Award, Zap } from 'lucide-react';
+import { Play, RotateCcw, Crosshair, Award, Zap, Timer } from 'lucide-react';
 
 interface PowerBarTrainerProps {
   targetPower: number;
@@ -14,25 +14,30 @@ export const PowerBarTrainer: React.FC<PowerBarTrainerProps> = ({
 }) => {
   const [currentPower, setCurrentPower] = useState(0);
   const [isCharging, setIsCharging] = useState(false);
+  const [isAutoCharging, setIsAutoCharging] = useState(false);
   const [lastReleasedPower, setLastReleasedPower] = useState<number | null>(null);
   const [accuracyRating, setAccuracyRating] = useState<{ label: string; color: string; score: number } | null>(null);
 
   const chargeStartTimeRef = useRef<number | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const isAutoModeRef = useRef(false);
 
-  // DDTank power bar speed: roughly 1.8 seconds to fill from 0 to 100
+  // DDTank power bar speed: roughly 1.8 seconds (1800ms) to fill from 0 to 100
   const FILL_DURATION_MS = 1800;
+  const holdDurationTargetMs = Math.round((targetPower / 100) * FILL_DURATION_MS);
 
   const startCharging = useCallback(() => {
-    if (isCharging) return;
+    if (isCharging || isAutoCharging) return;
+    isAutoModeRef.current = false;
     setIsCharging(true);
     setCurrentPower(0);
     chargeStartTimeRef.current = performance.now();
-  }, [isCharging]);
+  }, [isCharging, isAutoCharging]);
 
   const releaseCharging = useCallback(() => {
-    if (!isCharging) return;
+    if (!isCharging && !isAutoCharging) return;
     setIsCharging(false);
+    setIsAutoCharging(false);
 
     // Calculate score
     const delta = Math.abs(currentPower - targetPower);
@@ -41,8 +46,8 @@ export const PowerBarTrainer: React.FC<PowerBarTrainerProps> = ({
     let label = '';
     let color = '';
 
-    if (delta <= 0.8) {
-      label = lang === 'pt' ? 'PERFEITO! 🎯 100%' : 'PERFECT! 🎯 100%';
+    if (isAutoModeRef.current || delta <= 0.8) {
+      label = lang === 'pt' ? 'AUTO-DISPARO PERFEITO! 🎯 100%' : 'AUTO-FIRE PERFECT! 🎯 100%';
       color = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/40';
     } else if (delta <= 2.0) {
       label = lang === 'pt' ? 'EXCELENTE! ✨' : 'EXCELLENT! ✨';
@@ -55,22 +60,52 @@ export const PowerBarTrainer: React.FC<PowerBarTrainerProps> = ({
       color = 'text-rose-400 bg-rose-500/10 border-rose-500/40';
     }
 
-    setLastReleasedPower(Number(currentPower.toFixed(1)));
+    const released = isAutoModeRef.current ? targetPower : Number(currentPower.toFixed(1));
+    setLastReleasedPower(released);
     setAccuracyRating({ label, color, score });
 
-    // Fire bullet on arena
-    onFireWithPower(currentPower);
-  }, [isCharging, currentPower, targetPower, lang, onFireWithPower]);
+    onFireWithPower(released);
+  }, [isCharging, isAutoCharging, currentPower, targetPower, lang, onFireWithPower]);
 
-  // Handle Spacebar hold and release
+  // Automated spacebar hold & release on target power
+  const triggerAutoFire = useCallback(() => {
+    if (isCharging || isAutoCharging) return;
+    isAutoModeRef.current = true;
+    setIsAutoCharging(true);
+    setCurrentPower(0);
+    const startTime = performance.now();
+
+    const step = () => {
+      const elapsed = performance.now() - startTime;
+      const progress = (elapsed / FILL_DURATION_MS) * 100;
+
+      if (progress >= targetPower) {
+        setCurrentPower(targetPower);
+        setIsAutoCharging(false);
+        releaseCharging();
+        return;
+      }
+
+      setCurrentPower(progress);
+      animationFrameRef.current = requestAnimationFrame(step);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(step);
+  }, [isCharging, isAutoCharging, targetPower, releaseCharging]);
+
+  // Listen for Spacebar (manual hold) and Delete (auto hold-and-release)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
       if (e.code === 'Space' && !e.repeat) {
-        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-          return;
-        }
         e.preventDefault();
         startCharging();
+      } else if (e.key === 'Delete') {
+        e.preventDefault();
+        triggerAutoFire();
       }
     };
 
@@ -80,7 +115,9 @@ export const PowerBarTrainer: React.FC<PowerBarTrainerProps> = ({
           return;
         }
         e.preventDefault();
-        releaseCharging();
+        if (!isAutoModeRef.current) {
+          releaseCharging();
+        }
       }
     };
 
@@ -91,16 +128,11 @@ export const PowerBarTrainer: React.FC<PowerBarTrainerProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [startCharging, releaseCharging]);
+  }, [startCharging, releaseCharging, triggerAutoFire]);
 
-  // Charging animation loop
+  // Manual charging loop
   useEffect(() => {
-    if (!isCharging) {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      return;
-    }
+    if (!isCharging || isAutoCharging) return;
 
     const updateCharge = () => {
       if (!chargeStartTimeRef.current) return;
@@ -124,17 +156,7 @@ export const PowerBarTrainer: React.FC<PowerBarTrainerProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isCharging, releaseCharging]);
-
-  const handleQuickFire = () => {
-    setLastReleasedPower(targetPower);
-    setAccuracyRating({
-      label: lang === 'pt' ? 'AUTO-DISPARO PERFEITO (DDTool Del)' : 'AUTO-FIRE PERFECT (DDTool Del)',
-      color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/40',
-      score: 100,
-    });
-    onFireWithPower(targetPower);
-  };
+  }, [isCharging, isAutoCharging, releaseCharging]);
 
   return (
     <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl">
@@ -145,29 +167,32 @@ export const PowerBarTrainer: React.FC<PowerBarTrainerProps> = ({
           </div>
           <div>
             <h3 className="font-game font-bold text-base text-slate-100 uppercase tracking-wide">
-              {lang === 'pt' ? 'Barra de Força DDTank (Espaço)' : 'DDTank Power Bar (Space)'}
+              {lang === 'pt' ? 'Barra de Força DDTank (Espaço & Del)' : 'DDTank Power Bar (Space & Del)'}
             </h3>
             <p className="text-xs text-slate-400">
               {lang === 'pt'
-                ? 'Segure a Barra de Espaço ou botão para carregar e solte no marcador alvo'
-                : 'Hold Spacebar or button to charge and release at target mark'}
+                ? 'Pressione Delete para auto-segurar e soltar no valor exato, ou segure a barra de espaço manualmente'
+                : 'Press Delete to auto-charge and release at exact value, or hold Spacebar manually'}
             </p>
           </div>
         </div>
 
-        {/* Target Power Badge */}
+        {/* Target Power Badge & Timing duration */}
         <div className="flex items-center gap-3">
           <div className="text-right">
             <span className="text-[10px] text-slate-400 uppercase tracking-wider block">
-              {lang === 'pt' ? 'Força Alvo' : 'Target Power'}
+              {lang === 'pt' ? 'Força / Tempo' : 'Power / Time'}
             </span>
-            <span className="font-mono font-bold text-xl text-amber-400">{targetPower.toFixed(1)}</span>
+            <div className="flex items-baseline gap-1.5">
+              <span className="font-mono font-bold text-xl text-amber-400">{targetPower.toFixed(1)}</span>
+              <span className="text-xs text-slate-500 font-mono">({holdDurationTargetMs}ms)</span>
+            </div>
           </div>
 
           <button
-            onClick={handleQuickFire}
-            className="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-emerald-900/30 flex items-center gap-1.5 transition-all transform active:scale-95"
-            title="Dispara automaticamente com a força calculada (tecla Del do DDTool)"
+            onClick={triggerAutoFire}
+            className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-900/40 flex items-center gap-1.5 transition-all transform active:scale-95"
+            title="Auto-calcula e segura espaço até soltar no valor exato (Tecla Delete)"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             <span>{lang === 'pt' ? 'Auto-Tiro (Del)' : 'Auto-Fire (Del)'}</span>
@@ -206,10 +231,10 @@ export const PowerBarTrainer: React.FC<PowerBarTrainerProps> = ({
             style={{
               width: `${currentPower}%`,
               background: 'linear-gradient(90deg, #10b981 0%, #38bdf8 50%, #f59e0b 80%, #ef4444 100%)',
-              boxShadow: isCharging ? '0 0 16px rgba(56, 189, 248, 0.6)' : 'none',
+              boxShadow: isCharging || isAutoCharging ? '0 0 16px rgba(56, 189, 248, 0.6)' : 'none',
             }}
           >
-            {isCharging && (
+            {(isCharging || isAutoCharging) && (
               <div className="absolute right-0 top-0 bottom-0 w-2 bg-white rounded-r animate-pulse" />
             )}
           </div>
@@ -235,21 +260,25 @@ export const PowerBarTrainer: React.FC<PowerBarTrainerProps> = ({
             onTouchStart={startCharging}
             onTouchEnd={releaseCharging}
             className={`px-6 py-2.5 rounded-xl font-game font-bold text-sm select-none transition-all flex items-center gap-2 shadow-lg active:scale-95 ${
-              isCharging
+              isCharging || isAutoCharging
                 ? 'bg-amber-500 text-slate-950 scale-102 ring-4 ring-amber-500/30'
                 : 'bg-indigo-600 hover:bg-indigo-500 text-white'
             }`}
           >
             <Crosshair className="w-4 h-4" />
             <span>
-              {isCharging
+              {isAutoCharging
+                ? lang === 'pt' ? 'SEGURANDO AUTOMATICAMENTE...' : 'AUTO-HOLDING SPACEBAR...'
+                : isCharging
                 ? lang === 'pt' ? 'SOLTE PARA ATIRAR!' : 'RELEASE TO SHOOT!'
                 : lang === 'pt' ? 'SEGURE O ESPAÇO' : 'HOLD SPACEBAR'}
             </span>
           </button>
 
           <span className="text-xs text-slate-400 font-mono">
-            {lang === 'pt' ? 'Força Atual:' : 'Current:'} <strong className="text-slate-100">{currentPower.toFixed(1)}</strong>
+            {lang === 'pt' ? 'Força Atual:' : 'Current:'}{' '}
+            <strong className="text-slate-100">{currentPower.toFixed(1)}</strong>{' '}
+            <span className="text-slate-500">({Math.round((currentPower / 100) * FILL_DURATION_MS)}ms)</span>
           </span>
         </div>
 

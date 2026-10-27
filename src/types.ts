@@ -53,3 +53,11 @@ export interface Projectile {
   active: boolean;
   color: string;
 }
+
+export interface ScreenCaptureState {
+  isActive: boolean;
+  stream: MediaStream | null;
+  videoWidth: number;
+  videoHeight: number;
+  errorMessage: string | null;
+}

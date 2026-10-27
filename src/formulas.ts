@@ -60,15 +60,10 @@ export interface CalculationInput {
 export function calculateAllFormulas(input: CalculationInput): CalculationResult[] {
   const { distanceUnits, wind, heightDeltaUnits, lang } = input;
   const results: CalculationResult[] = [];
-
-  // Effective wind in the direction of fire
-  // If player shoots to the right and wind is positive, it's a tailwind.
   const effWind = wind;
 
   // 1. FORMULA 65°
   {
-    // Formula 65: Angle = 65 +/- (Wind * 2)
-    // Height correction: +1° angle for each ~1.2 units target is above, -1° if below
     const windAngle = Math.round(effWind * 2);
     const heightAngle = Math.round(heightDeltaUnits * 0.8);
     const totalAngle = Math.min(89, Math.max(20, 65 + windAngle + heightAngle));
@@ -90,15 +85,12 @@ export function calculateAllFormulas(input: CalculationInput): CalculationResult
 
   // 2. HIGH THROW / FORMULA 90°
   {
-    // High Throw: Angle = 90 - Distance + (Wind * 2)
-    // Fixed power 95 (or slightly adjusted for height: +2 power per 1 unit higher, -2 power per unit lower)
     const windAngle = Math.round(effWind * 2);
     const distAngle = Math.round(distanceUnits);
     const heightAngle = Math.round(-heightDeltaUnits * 0.5);
     const baseAngle = 90 - distAngle + windAngle + heightAngle;
     const finalAngle = Math.min(89, Math.max(45, baseAngle));
     
-    // Power is 95 base, modified by height
     let highPower = 95;
     if (heightDeltaUnits > 0) {
       highPower = Math.min(100, Math.round(95 + heightDeltaUnits * 2.5));
@@ -122,7 +114,6 @@ export function calculateAllFormulas(input: CalculationInput): CalculationResult
 
   // 3. FORMULA 50°
   {
-    // Formula 50: Angle = 50 + (Wind * 2)
     const windAngle = Math.round(effWind * 2);
     const heightAngle = Math.round(heightDeltaUnits * 0.7);
     const totalAngle = Math.min(85, Math.max(15, 50 + windAngle + heightAngle));
@@ -144,7 +135,6 @@ export function calculateAllFormulas(input: CalculationInput): CalculationResult
 
   // 4. FORMULA 30° (LOW ANGLE / DIGGER)
   {
-    // Formula 30: Angle = 30 + (Wind * 1)
     const windAngle = Math.round(effWind * 1);
     const heightAngle = Math.round(heightDeltaUnits * 0.5);
     const totalAngle = Math.min(65, Math.max(10, 30 + windAngle + heightAngle));
@@ -166,7 +156,6 @@ export function calculateAllFormulas(input: CalculationInput): CalculationResult
 
   // 5. FORMULA 45° (HALF SCREEN)
   {
-    // Formula 45: Angle = 45 + (Wind * 2)
     const windAngle = Math.round(effWind * 2);
     const heightAngle = Math.round(heightDeltaUnits * 0.75);
     const totalAngle = Math.min(85, Math.max(15, 45 + windAngle + heightAngle));
@@ -210,8 +199,81 @@ export function calculateAllFormulas(input: CalculationInput): CalculationResult
   return results;
 }
 
-// Physics simulation for DDTank canvas
-// Simulates real projectile arc under DDTank gravity and wind acceleration
+// SOLVER: Computes the exact power required to hit (targetX, targetY)
+// from (playerX, playerY) at ANY given angle and wind!
+export function solvePowerForCurrentAngle(
+  origin: Point,
+  target: Point,
+  angleDeg: number,
+  wind: number,
+  facingRight: boolean
+): { power: number; timeMs: number; canReach: boolean } {
+  let lowPower = 5;
+  let highPower = 100;
+  let bestPower = 50;
+  let closestMiss = 999999;
+  const targetDistX = Math.abs(target.x - origin.x);
+
+  // Binary search across 16 iterations
+  for (let iter = 0; iter < 16; iter++) {
+    const midPower = (lowPower + highPower) / 2;
+    const rad = (angleDeg * Math.PI) / 180;
+    const speed = (midPower / 100) * 26.5;
+    const dir = facingRight ? 1 : -1;
+
+    let vx = speed * Math.cos(rad) * dir;
+    let vy = -speed * Math.sin(rad);
+    let x = origin.x;
+    let y = origin.y - 12;
+
+    const gravity = 0.38;
+    const windAcc = wind * 0.045;
+    let hitOrPassed = false;
+    let distAtTargetX = 0;
+
+    for (let t = 1; t <= 300; t++) {
+      vx += windAcc;
+      vy += gravity;
+      x += vx;
+      y += vy;
+
+      const currentDistX = Math.abs(x - origin.x);
+      if (currentDistX >= targetDistX || y > target.y + 100) {
+        distAtTargetX = currentDistX;
+        const err = Math.hypot(x - target.x, y - target.y);
+        if (err < closestMiss) {
+          closestMiss = err;
+          bestPower = midPower;
+        }
+
+        // If projectile is below target when reaching X, it lacked power
+        if (y > target.y) {
+          lowPower = midPower;
+        } else {
+          highPower = midPower;
+        }
+        hitOrPassed = true;
+        break;
+      }
+    }
+
+    if (!hitOrPassed) {
+      lowPower = midPower;
+    }
+  }
+
+  const finalPower = Number(Math.max(5, Math.min(100, bestPower)).toFixed(1));
+  // DDTank power bar takes ~1800ms for 100% power
+  const timeMs = Math.round((finalPower / 100) * 1800);
+
+  return {
+    power: finalPower,
+    timeMs,
+    canReach: closestMiss < 40,
+  };
+}
+
+// Forward trajectory simulation for canvas rendering
 export function simulateTrajectory(
   origin: Point,
   angleDeg: number,
@@ -225,9 +287,7 @@ export function simulateTrajectory(
 ): SimulationResult {
   const points: SimulationTrajectoryPoint[] = [];
   
-  // Physics parameters tuned for DDTank feel on a ~900x500 canvas
   const rad = (angleDeg * Math.PI) / 180;
-  // Speed factor: power 100 = ~26 px/frame
   const initialSpeed = (powerPercent / 100) * 26.5;
   const dir = facingRight ? 1 : -1;
 
@@ -235,9 +295,9 @@ export function simulateTrajectory(
   let vy = -initialSpeed * Math.sin(rad);
 
   let x = origin.x;
-  let y = origin.y - 10; // muzzle offset
+  let y = origin.y - 10;
   const gravity = 0.38;
-  const windAcc = wind * 0.045; // wind acceleration factor
+  const windAcc = wind * 0.045;
   const dt = 1;
   let maxAltitude = y;
   let impactPoint: Point | null = null;
@@ -248,7 +308,6 @@ export function simulateTrajectory(
   points.push({ x, y, vx, vy, time: 0 });
 
   for (let t = 1; t <= 300; t++) {
-    // DDTank wind applies continuous horizontal acceleration
     vx += windAcc * dt;
     vy += gravity * dt;
 
@@ -261,7 +320,6 @@ export function simulateTrajectory(
 
     points.push({ x, y, vx, vy, time: t });
 
-    // Check target hit (target bounding box ~25px radius)
     const dTarget = Math.hypot(x - target.x, y - (target.y - 12));
     if (dTarget < closestDistToTarget) {
       closestDistToTarget = dTarget;
@@ -273,7 +331,6 @@ export function simulateTrajectory(
       break;
     }
 
-    // Check terrain collision
     const groundY = terrainHeightAtX(x);
     if (y >= groundY) {
       impactPoint = { x, y: groundY };
@@ -281,7 +338,6 @@ export function simulateTrajectory(
       break;
     }
 
-    // Check boundary collision
     if (x < -100 || x > canvasWidth + 100 || y > canvasHeight + 100) {
       impactPoint = { x, y };
       flightTime = t;
