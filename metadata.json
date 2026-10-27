@@ -1,0 +1,6 @@
+{
+  "name": "DDTank Trajectory & Aim Calculator",
+  "description": "Recriação completa em React do DDTool / DDTank Aimbot com simulação física de trajetórias, fórmulas 65°, 50°, 30° e 90° alto, radar de arena, medidor de força da barra de espaço e suporte PT-BR/EN.",
+  "permissions": [],
+  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
