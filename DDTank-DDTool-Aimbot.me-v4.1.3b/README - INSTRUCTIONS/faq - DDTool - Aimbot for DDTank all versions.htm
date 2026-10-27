@@ -1,0 +1,209 @@
+
+<!-- saved from url=(0043)http://ddtanktool.appspot.com/faq.html?l=en -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	
+	<meta http-equiv="imagetoolbar" content="no">
+	<meta name="keywords" content="hack,gunny,toa do,cuong hoa,hack gunny,aimbot,ddtank,ddtank aimbot,hack ddtank,cheat ddtank">
+	<title>faq - DDTool - Aimbot for DDTank all versions</title>
+	
+	<link rel="stylesheet" type="text/css" href="./faq - DDTool - Aimbot for DDTank all versions_files/jquery-ui-1.8.16.custom.css">
+	<link rel="stylesheet" type="text/css" href="./faq - DDTool - Aimbot for DDTank all versions_files/style.css">
+	
+	
+	<script type="text/javascript" async="" src="./faq - DDTool - Aimbot for DDTank all versions_files/ga.js"></script><script type="text/javascript" src="./faq - DDTool - Aimbot for DDTank all versions_files/jquery-1.6.1.min.js"></script>
+	<script type="text/javascript" src="./faq - DDTool - Aimbot for DDTank all versions_files/jquery-ui-1.8.16.custom.min.js"></script>
+	<script type="text/javascript" src="./faq - DDTool - Aimbot for DDTank all versions_files/common.js"></script>
+	
+	
+	
+	
+	 
+
+	<script type="text/javascript">
+	  var _gaq = _gaq || [];
+	  _gaq.push(['_setAccount', 'UA-28997503-1']);
+	  _gaq.push(['_trackPageview']);
+	
+	  (function() {
+	    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+	    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+	    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+	  })();
+	
+	</script>
+	
+
+<script>
+var showDownloadDialogContent = "<div>" +
+"<div id=\"dynamic_recaptcha_1\"></div>" +
+"<div id=\"status\"></div>" +
+"</div>";
+
+var onDownloadOk = function() {};
+var version="3.3.9";
+var attempt = 0;
+var showDownloadDialogOkBtn = {
+    text: "Ok",
+    click: function() {
+    	$("#status").html( "<img src='/img/checking.gif'><b>Submitting your data. Please wait...</b>");
+    	$.post("/captcha",{validation: "gunnyToolDownload", recaptcha_challenge_field: Recaptcha.get_challenge(), recaptcha_response_field: Recaptcha.get_response()}, function(resp) {
+    		if (resp.status=="ok") {
+        		onDownloadOk();
+    		} else {
+        		$("#status").html("Try again - " + (++attempt));
+        		Recaptcha.reload();
+    		}
+    	} , "json");
+   	}
+};
+
+var showDownloadDialog;
+
+var toolDisplayName = "DDTool";
+$(function() {
+	showDownloadDialog = $(showDownloadDialogContent).dialog({
+		title: "Download " + toolDisplayName,
+		autoOpen: false,
+		modal: true,
+		width: 500,
+		buttons: [showDownloadDialogOkBtn,CANCEL_DIALOG]
+		});
+});
+
+function showDownloadBox(branch) {
+	if (branch==null) {
+		branch = $('#branchSelect').val();
+	}
+	if (isBlank(branch)) {
+		alert("Error, no branch selected");
+		return;
+	}
+	$.post("/guest?action=allowDirectDownload", {}, function(data) {
+		
+		if (data=="true") {
+    		window.location="/guest?action=download&software=gunnyTool&branch=" + branch + "&v=" + version;
+		} else {
+			attempt = 0;
+
+			onDownloadOk = function() {
+				showDownloadDialog.dialog("close");
+				window.location="/guest?action=download&software=gunnyTool&branch=" + branch + "&v=" + version;
+			};
+			
+			showDownloadDialog.dialog('open');
+			Recaptcha.create("6LcmLMwSAAAAAK_BH3QPdgM80L7A9Dqt-BEAPXnQ",
+					"dynamic_recaptcha_1", {
+						theme : "white",
+						callback : Recaptcha.focus_response_field
+					});
+		}
+	},"html");
+	
+	
+}
+
+</script>
+
+<script src="./faq - DDTool - Aimbot for DDTank all versions_files/tbpreload.js" id="fn_selector_insertion_script"></script></head>
+<body>
+<div id="main">
+
+	<div id="page">
+		
+		
+<style>
+#globalWarning {
+	border-color: #220000;
+	border-width: 1;
+	border-style: solid;
+	background-color: #FFCCCC;
+	padding: 10px;
+}
+</style>
+
+	 	<div id="col_wrap">
+	 		<div id="col_top"></div>
+			<div id="col_left">
+
+			
+
+		<!-- Content Start -->
+		
+		<style>
+.question {
+	color: #775537;
+}
+</style>
+
+<h1>Frequently Asked Questions</h1>
+
+
+<p class="question">1. Why I have to install Java?</p>
+
+<p>DDTool is built upon modern Java foundation, to ensure enough
+	intelligence for the software to analyze difficult data (analyze
+	screen). Thus, we need to install Java to allow DDTool to work</p>
+
+<p id="keylog" class="question">2. Would DDTool has a Keylog and steal my 
+	game account?</p>
+<p>
+	DDTool has NO Keylog or virus or whatsoever that would harm you, or your game account or your computer.
+	. If you dont believe that, then you can <b>only turn the DDTool on after you have logged in to your game
+	</b>, then DDTool will not be able to steal your nick. If you haven't believed, then check by this way (should do the same with
+	internet softwares for the maximum security)
+</p>
+<ul class="list">
+	<li> If you use Windows Vista, or Windows 7, then never allow the software
+		to have administrator privilege (the administrator privilege dialog with
+		come up when you open the software and blur other windows). 
+		With DDTool, you will not see this screen because DDTool doesn't need
+		administrator privilege</li>
+	<li>Monitor windows' processes (access by Ctrl+Alt+Del &gt; Task manager) to 
+		make sure there is no other process spawned (a normal keylog or virus process
+		would still continue even when you have shutdown the software). With DDTool, 
+		you will see there are 2 java.exe processes and they will disappear when you shut
+		DDTool down (Java is very safe to computer)</li>
+</ul>
+<p>
+	Also, 100% of our benefit come from you and your trust, not from your Game account.
+	We value you and your trust as we value our other thousands of customers worldwide
+	- as that is the source of our business.
+</p>
+
+<p id="silent" class="question">3. Will Game Operators know that I use DDTool and lock my account?</p>
+<p>Unlike other traditional game hack tool which hook deep inside game memory,
+	DDTool use a very safe method to hack which is scan screen and analyze,
+	Game Operator won't be able to know that you are using DDTool.</p>
+
+<p id="whyOthersNot" class="question">4. Why this hacking method is so safe but still
+	other hack tool doesnot use?</p>
+	
+<p>Because this method is very complicated and expensive, moreover, it is not
+	100% accurate, and should only apply to games that have high security level.
+	For other lower security games, we can use other simpler hacking method
+	and the result is still accurate</p>
+
+		
+		<!-- Content End -->
+		
+
+</div>
+
+			
+
+			<div class="clear"></div>
+		</div>
+
+		<div id="col_bottom"></div>
+
+		
+
+	</div>
+	
+	</div>
+	
+
+
+
+
+</body></html>

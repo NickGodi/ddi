@@ -1,0 +1,2 @@
+set PATH=%PATH%;C:\Program Files (x86)\Java\jre6\bin;C:\Program Files (x86)\Java\jre7\bin;C:\Program Files\Java\jre7\bin;C:\Program Files\Java\jre6\bin;C:\Program Files\Java\jre1.6.0\bin
+start javaw -cp data/wrapper/quan-util-core.jar qj.util.Wrapper qj.game.gunny.ClientHostMain
